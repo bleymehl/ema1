@@ -7,4 +7,5 @@ import { Component, Input } from '@angular/core';
 })
 export class ExploreContainerComponent {
   @Input() name?: string;
+  @Input() test: string = 'Mein TEST';
 }
