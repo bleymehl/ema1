@@ -280,3 +280,202 @@ Ihre Aufgabe bis zum nächsten Termin:
 Versuchen Sie, die Ion-Cards im Screenshot nachzubauen, auch mit Anzeige der Icons.
 
 Ich hänge Ihnen zusätzlich noch eine Farbinformation der Agentur an.
+
+
+-------
+Laden der Daten von der API der Webseite.
+
+Die Daten, die in der App verwendet werden sollen, stammen von der Webseite wissen-in-leipzig.de und sind als JSON-Datei unter
+
+https://www.wissen-in-leipzig.de/json-export/
+
+abrufbar.
+
+Wenn Sie die Seite direkt aufrufen, ist es in der Regel schwer, die Struktur zu erkennen. 
+Der Firefox-Browser stellt die JSON-Struktur direkt brauchbar da, andere meist nicht.
+Hier kann die Webseite https://jsonformatter.curiousconcept.com helfen.
+
+In das Eingabefeld können Sie entweder JSON direkt reinkopieren oder aber die URL der Webseite.
+
+############
+
+Die geladenen Daten wollen wir in der gleichen Variablen speichern, wie beim jetzigen Stand, also in GetdataService.data.
+Wenn wir die bisher unter data= [] gespeicherten Daten löschen und nur noch die Array-Klammern stehen lassen, zeigt VSCode Fehler an.
+z.B. wenn irgendwo steht item.beginn und das item ein Element des data-Arrays ist.
+
+Bevor wir die Daten gelöscht haben, war für den Editor ersichtlich, welche Struktur die Daten hatten. Das ist jetzt unklar und deshalb sind die Eigenschaften, auf die 
+wir zugreifen wollen auch nicht bekannt. Javascript wäre das egal, es würde einfach erwarten, dass die Eigenschaften später da sind.
+Typescript braucht jedoch die Informationen über die Struktur der Daten.
+
+Um Typescript die Struktur mitzuteilen, müssen wir ein interface anlegen. Damit definieren wir sowas wie einen Variablentypen (string, integer), den wir entsprechend dann auch anwenden können.
+
+Die Definition erfolgt vor dem @-Deklarator und nach dem Imports:
+
+
+// Datenstruktur für die eingehenden Daten
+
+interface EintragData {      
+  id: string;
+  termin_id: string;
+  titel: string;
+  beschreibung: string; // mit HTML-Tags!?
+  beginn: string; //"2025-06-20T16:00:00",
+  ende: string; //"2025-06-20T16:00:00",
+  ort: string;
+  ort_id: string;
+  adresse: string;
+  einrichtung: string;
+  verantwortlich: string;
+  format: string;
+  themen: string;
+  kinder: boolean;
+  barrierefrei: boolean;
+  english: boolean;
+  favorit: boolean;
+}
+
+interface OrteData {
+  ort_id: string;
+  karte: number;
+  google_link: string;
+}
+
+
+Wie bei Klassendefinitionen schreibt man  i.A. die Interfaces mit führendem Großbuchstaben.
+
+Jetzt definieren wir data wie folgt (und ein Array für die Ortsinformationen gleich mit):
+
+  // Data als Array von EintragData
+  data: EintragData[] = [];
+  // Orte als Array von OrteData
+  orte: OrteData[] = [];
+
+"data ist vom Typ Array of EintragData und es wird ein leeres Array zugewiesen"
+
+
+Jetzt sollten die Fehlermeldungen verschwunden sein.
+
+##############
+
+
+Die Daten sollen gleich bei Programmstart geladen werden, d.h. ein geeigneter Platz dazu wäre der constructor von GetdataService.
+
+Das Laden der Daten ist jedoch ein asynchroner Vorgang, d.h. dass der Vorgang gestartet wird, man aber nicht auf das 
+Ende der Ausführung warten muss, aber warten kann.
+
+Warten ist dann sinnvoll, wenn der nächste Schritt erst ausgeführt werden kann, wenn das Ergebnis da ist.
+So in unserem Fall:
+
+Mit folgender Zeile können wir die Daten von der API abfragen:
+const response = await fetch('https://www.wissen-in-leipzig.de/json-export/');
+
+Das await bedeutet, dass die nächste Programmzeile erst ausgeführt wird, wenn fetch ein Ergebnis geliefert und in response gespeichert hat.
+response ist vom Typ Response, also nicht direkt JSON.
+
+Mittels:
+const zwi = await response.json();
+
+werden die enthaltenen Daten jedoch als JSON in zwi gespeichert. Auch hier macht es noch keinen Sinn, weiterzuarbeiten, wenn 
+in zwi die Daten noch nicht vollständig vorhanden sind, daher auch hier ein await.
+
+
+Muss man nicht auf das Ergebnis des asynchronen Aufrufs warten, so gibt man eine Callback-Funktion an, die aufgerufen wird, sobald das Ergebnis vorliegt
+(dazu kommen wir gleich nochmals).
+
+Im Constructor können wir kein await platzieren, da dies die Instantiierung der Komponente aufhält.
+Statt dessen erstellen wir eine eigene Methode loadData(), die wir innerhalb des Constructors aufrufen.
+
+async loadData(){
+     // Die Daten über eine API laden, im Falle eines Fehlers die Daten aus dem Storage laden (kommt noch)
+     try {
+      const response = await fetch('https://www.wissen-in-leipzig.de/json-export/');
+      //const response = await fetch('./assets/lndw.json');
+
+      const zwi = await response.json();
+      this.data = zwi.data;
+      this.orte = zwi.orte;
+     } catch (error) {
+      console.error('Fehler beim Laden der Daten:', error);
+     }
+}
+
+
+Wird in einer Methode ein await verwendet, dann ist die Dauer der Ausführung nicht wirklich abzuschätzen, eine solche Methode muss daher als async gekennzeichnet werden, 
+um bei Aufruf nicht das ganze Programm zu blockieren.
+
+
+Da der Aufruf von fetch() auch Fehler produzieren kann (Server down, kein Internet), müssen wir diesen Fall berücksichtigen. Genauso kann z.B. json() 
+einen Fehler produzieren, wenn die Daten kein korrektes JSON enthalten.
+Die Funktionen "werfen" einen Fehler, den wir "auffangen" können: try{} catch(error){}
+  
+
+###################
+
+
+Ein Aufruf von loadData() würde also das Datenladen starten und gleich zur nächsten Zeile springen und diese ausführen.
+
+Wenn wir also unseren constructor wie folgt schreiben:
+
+constructor() {
+    this.loadData();
+    
+    // in allen Daten "beginn" und "ende" die darin enthaltene Uhrzeit extrahieren und beginn und ende darauf setzen, die Minuten, die kleiner 10
+    // sind, mit einer 0 auffuellen
+    this.data.forEach(item => {
+      const begin = new Date(item.beginn);
+      const end = new Date(item.ende);
+      item.beginn = `${begin.getHours()}:${begin.getMinutes() < 10 ? '0' + begin.getMinutes() : begin.getMinutes()}`;
+      item.ende = `${end.getHours()}:${end.getMinutes() < 10 ? '0' + end.getMinutes() : end.getMinutes()}`;
+    }
+    );
+  }
+
+bedeutet dies, dass das Datenladen gestartet wird und direkt danach die Daten bearbeitet werden (data.foreach). Es ist aber nicht sichergestellt, dass die Daten 
+bereits geladen wurden. Wenn nicht, ist data noch leer.
+Wir müssen hier auf eine Callback-Funktion zurückgreifen:
+
+ this.loadData().then(this.machwas());
+
+
+Wir könnten jetzt diese Methode weiter unten schreiben und die this.data.forEach-Schleife dorthin verschieben. Da diese Methode jedoch nur genau an dieser
+Stelle aufgerufen werden würde, wäre das unnötig unübersichtlich. Hierzu kann man nun Arrow-Functions verwenden, eine Abkürzung für solche Fälle:
+
+ this.loadData().then(() => {
+      // in allen Daten "beginn" und "ende" die darin enthaltene Uhrzeit extrahieren und beginn und ende darauf setzen, die Minuten, die kleiner 10
+      // sind, mit einer 0 auffuellen
+      this.data.forEach(item => {
+        const begin = new Date(item.beginn);
+        const end = new Date(item.ende);
+        item.beginn = `${begin.getHours()}:${begin.getMinutes() < 10 ? '0' + begin.getMinutes() : begin.getMinutes()}`;
+        item.ende = `${end.getHours()}:${end.getMinutes() < 10 ? '0' + end.getMinutes() : end.getMinutes()}`;
+      }
+      );
+
+	console.log(this.data);
+    });
+
+() => {}
+In den Klammern könnten noch Parameter stehen, der Pfeil (Arrow) übernimmt die Definitionsgeschichte, einen Methodennamen brauchen wir nicht und die Klammern {} bedeuten dasselbe.
+
+Jetzt sollte das Laden funktionieren und Ihre Seite die Daten anzeigen. In der Konsole sollten die Daten angezeigt werden.
+Wenn das funktioniert, können Sie ihr WLan ausschalten und neu laden, dann sollte eine rote Fehlermeldung (console.error statt console.log) erscheinen.
+
+########################
+
+Noch etwas zu dem, was das Databinding so toll macht:
+
+this.data ist bei Programmstart ein leeres Array. 
+Angenommen, das Laden dauert eine Sekunde. Da es asynchron abläuft, ist in dieser Zeit unsere gesamte Seite bereits aufgebaut worden. Da das Array ja leer ist, hat im HTML der tab2
+die Zeile <ion-card *ngFor="let item of getdataservice.data"> keine einzige Card erstellt.
+Sobald das Laden jedoch fertig ist und sich damit getdataservice.data geändert hat, wird automatisch die Seite neu gerendert und unser vollständige Tabelle ist da.
+
+Fortsetzung folgt...
+
+
+
+
+ 
+
+
+
+ 
