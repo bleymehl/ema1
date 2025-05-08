@@ -473,9 +473,191 @@ Fortsetzung folgt...
 
 
 
-
+################################################
  
 
+Daten im Gerät speichern
+
+Um Daten in der App lokal auf dem Gerät zu speichern, gibt es mehrere Möglichkeiten.
+Die vorgeschrittenste ist die Nutzung einer SQLite-Datenbank, was aber im Browser nicht funktionieren würde,
+da diese SQLite nicht unterstützen.
+
+Ionic bietet eine Storage Bibliothek an, die sich dynamisch an die verfügbaren Speicheroptionen anpasst.
+D.h., im Browser wird z.B. der local storage für die Webseite genutzt, auf dem Gerät kann SQLite mit den gleichen
+Befehlen genutzt werden.
+
+Auch wenn in dem Webview einer App der Localstorage des Webbrowsers bzw. indexedDB zur Verfügung steht, so ist nicht
+sichergestellt, dass die Daten auf Dauer in der App gespeichert bleiben. Die Betriebssysteme iOS und Android können
+unter Umständen diese Speicher löschen. Insoweit ist es notwendig, zur persistenten (dauerhaften) Speicherung von Daten
+SQLite zu verwenden.
+
+Ionic storage
+
+https://github.com/ionic-team/ionic-storage#sqlite-installation
+
+npm install @ionic/storage-angular
 
 
- 
+// If using Capacitor, install the plugin using
+npm install cordova-sqlite-storage
+
+// Then, install the npm library
+npm install localforage-cordovasqlitedriver
+
+in main.ts:
+```javascript
+import { bootstrapApplication } from '@angular/platform-browser';
+import { RouteReuseStrategy, provideRouter, withPreloading, PreloadAllModules } from '@angular/router';
+import { IonicRouteStrategy, provideIonicAngular } from '@ionic/angular/standalone';
+
+import { routes } from './app/app.routes';
+import { AppComponent } from './app/app.component';
+import { Drivers, Storage } from '@ionic/storage'; // *****
+import CordovaSQLiteDriver from 'localforage-cordovasqlitedriver'; // *****
+
+bootstrapApplication(AppComponent, {
+  providers: [
+    { provide: RouteReuseStrategy, useClass: IonicRouteStrategy },
+    { // *****
+      provide: Storage,
+      useFactory: () =>
+        new Storage({
+          //driverOrder: [CordovaSQLiteDriver._driver],
+          driverOrder: [CordovaSQLiteDriver._driver, Drivers.IndexedDB, Drivers.LocalStorage],
+
+        }),
+    },
+    provideIonicAngular(),
+    provideRouter(routes, withPreloading(PreloadAllModules)),
+  ],
+});
+```
+
+Die driverOrder gibt die Prioritäten an, nach denen die verschiedenen Speicheroptionen
+genutzt werden:
+Wenn vorhanden: SQLite, sonst: IndexedDB, sonst: LocalStorage
+
+Dann in tsconfig.json folgende Zeile ergänzen unter Compileroptions:
+ "allowSyntheticDefaultImports": true
+
+Ergänzen Sie in der getData.Service.ts folgende Imports:
+
+import { Storage } from '@ionic/storage-angular';
+import CordovaSQLiteDriver from 'localforage-cordovasqlitedriver';
+
+Vor dem ersten Aufruf der storage-Instanz muss der Treiber initialisiert werden.
+Dies geht z.B. im Constructor des GetdataService.
+Da die Initialisierung asynchron ist, müssen wir eine entsprechende Methode erstellen,
+die wir dann aufrufen:
+
+ constructor(private storage: Storage) { 
+    this.init();
+    this.loadData().then(...)
+  }
+
+  async init() {
+    await this.storage.defineDriver(CordovaSQLiteDriver);
+    await this.storage.create(); // DATENBANK anlegen!
+  }
+
+  Auch hier kann es zu Timingproblemen kommen, wenn wir z.B.
+in der loadData die Daten in den Storage speichern wollen.
+
+Daher macht es Sinn, dies wie folgt zu programmieren:
+
+ constructor(private storage: Storage) { 
+    this.init().then(() => {
+       this.loadData().then(...)
+    });
+   
+  }
+
+Das Speichern von Daten im Storage geschieht über Keys:
+
+ await this.storage.set('favoritesYear', this.favoritesYear);
+
+Das Auslesen von Daten aus dem Speicher funktioniert wie folgt:
+
+   // Leerstring, falls der Key nicht vorhanden ist.
+   this.favoritesYear = await this.storage.get('favoritesyear') || "";
+
+
+
+Der Constructor in getdata.service sollte jetzt in etwa so aussehen:
+
+-----------------
+ constructor(private storage: Storage) {
+    // Storage initialisieren
+    this.init().then(() => {     
+      this.loadData().then(() => {
+        // in allen Daten "beginn" und "ende" die darin enthaltene Uhrzeit extrahieren und beginn und ende darauf setzen, die Minuten, die kleiner 10
+        // sind, mit einer 0 auffuellen
+        console.log('Daten geladen:', this.data);
+        this.data.forEach(item => {
+          const begin = new Date(item.beginn);
+          const end = new Date(item.ende);
+          item.beginn = `${begin.getHours()}:${begin.getMinutes() < 10 ? '0' + begin.getMinutes() : begin.getMinutes()}`;
+          item.ende = `${end.getHours()}:${end.getMinutes() < 10 ? '0' + end.getMinutes() : end.getMinutes()}`;
+        }       
+        );
+        this.storage.set('data', this.data);
+      });
+    }
+    );
+  }
+
+  // Storage initialisieren
+  async init() {
+    await this.storage.defineDriver(CordovaSQLiteDriver);
+    await this.storage.create();
+  }
+--------------------
+
+Hier wird nach dem Anpassen von Beginn und Ende einfach der 
+komplette Inhalt von this.data unter dem Key data gespeichert.
+
+Im Browser können Sie sich den Storage anschauen, in dem Sie die Konsole 
+aufrufen und neben der Konsole irgendwo sich den Speicher anzeigen lassen.
+
+---------------------------
+Favoriten speichern:
+
+Die einzelnen Veranstaltungen können mehrfach mit unterschiedlichen Terminen
+eingetragen sein. Die id bezeichnet dabei eine Veranstaltung, die termin_id jeweils
+einen Termin. In der Originaldatenbank sind die Veranstaltungen nicht mehrfach 
+enthalten, für unsere Api wurde jedoch für jeden Termin ein Eintrag erstellt.
+
+Wenn wir als Favoriten nur die ID speichern, werden uns alle Termine eines
+Eintrags angezeigt. Daher ist es notwendig, id und termin_id als Favoriten zu speichern.
+
+Wir definieren daher ein interface für unsere Favoriten:
+
+export interface Favorit {
+    id: string;
+    termin_id: string;
+}
+
+und wir erstellen ein leeres Array zur Speicherung der Favoriten:
+
+favoriten: Favorit[] = [];
+
+Wir können die Favoriten direkt im init() laden, nach der Initialisierung des Storage:
+
+this.favoriten = await this.storage.get('favoriten') || [];
+
+Es wird ein leeres Array zurückgegeben, wenn der Key nicht vorhanden ist.
+
+Um einen Eintrag als ein- oder auszutragen, bietet sich eine Methode
+toogleFavorit(id:string, termin_id: string) an.
+Um festzustellen, ob ein Eintrag zu den Favoriten gehört (um z.B. das Herz entsprechend
+einzufärben) ist eine Methode
+ isFavorit(id: string, termin_id: string): boolean an.
+
+Versuchen Sie, diese Funktionen mit Hilfe von KI zu erstellen.
+Testen können Sie diese z.B. nach dem Laden der Daten mit einem Aufruf wie:
+
+ this.toogleFavorit(this.data[0].id, this.data[0].termin_id);
+ console.log('Favoriten:', this.favoriten);
+ console.log('isFavorit:', this.isFavorit(this.data[0].id, this.data[0].termin_id));
+   
+Fortsetzung folgt....
