@@ -14,18 +14,9 @@
   </ion-header>
 
 
-  
-  <ion-card *ngFor="let item of getdataservice.data">
-    <ion-card-header>
-      <ion-card-title>{{item.titel}}</ion-card-title>
-      <ion-card-subtitle>Card Subtitle</ion-card-subtitle>
-    </ion-card-header>
-  
-    <ion-card-content>
-      {{item.beginn}} - {{item.ende}}
-      Global Counter: {{ getdataservice.counter}}
-    </ion-card-content>
-  </ion-card>
+  <div *ngFor="let item of getdataservice.data">
+    <app-eintrag [eintrag]="item"></app-eintrag>
+  </div >
 
   <ion-button (click)="getdataservice.incrementCounter()">Increment</ion-button>
   <ion-button (click)="getdataservice.decrementCounter()">Decrement</ion-button>

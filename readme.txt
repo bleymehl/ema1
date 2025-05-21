@@ -661,3 +661,238 @@ Testen können Sie diese z.B. nach dem Laden der Daten mit einem Aufruf wie:
  console.log('isFavorit:', this.isFavorit(this.data[0].id, this.data[0].termin_id));
    
 Fortsetzung folgt....
+
+
+Auslagern der Anzeige der Einträge in einer Karte in eine eigene Komponente.
+
+Sie haben bisher auf der Startseite die Einträge in einer ion-Card dargestellt und in die HTML-Seite eingebunden:
+
+in etwa so:
+
+<ion-card *ngFor="let item of getdataservice.data">
+    <ion-card-header>
+      <ion-card-title>{{item.titel}}</ion-card-title>
+      <ion-card-subtitle>Card Subtitle</ion-card-subtitle>
+    </ion-card-header>
+  
+    <ion-card-content>
+      {{item.beginn}} - {{item.ende}}
+      Global Counter: {{ getdataservice.counter}}
+    </ion-card-content>
+  </ion-card>
+
+  Ein wesentlicher Vorteil von Angular und somit auch Ionic ist die Nutzung von Komponenten. Jede Seite ist eine solche Komponente (tab1, tab2, tab3).
+  Man kann (und sollte) dies aber durchaus weiterführen.
+
+  Deshalb werden wir eine Komponente "eintrag" erstellen, in der wir uns nur um die Gestaltung dieser Karte kümmern müssen.
+  Um etwas Struktur reinzubringen, wollen wir diese in ein Unterverzeichnis components ablegen:
+
+  ionic generate component components/eintrag --standalone
+  bzw.
+  ionic g c components/eintrag --standalone
+
+  Jetzt kopieren Sie Ihr HTML aus der Liste in die eintrag.component.html. Kopieren Sie die komplette Card, auch wenn dort Ihre For-Schleife drin hängt:
+  Sollten Sie CSS für diesen Teil ergänzt haben, so kopieren Sie diesen in die eintrag.component.scss.
+
+  Auf der Startseite können Sie jetzt folgendes hinschreiben (mit Ihrer For-Schleife):
+
+
+  <div *ngFor="let item of getdataservice.data">
+    <app-eintrag [eintrag]="item"></app-eintrag>
+  </div >
+
+  Natürlich fehlt noch Einiges, weshalb ihr Projekt im Moment nicht läuft.
+  1. Sie müssen auf dieser Seite die Eintrag-Komponente importieren
+     import { EintragComponent } from '../components/eintrag/eintrag.component';
+
+     sowie
+ 
+     standalone: true,
+     imports: [EintragComponent,...
+
+     EintragComponent heißt die Klasse in unserer neu erstellten Komponente:
+     export class EintragComponent  implements OnInit {
+
+  2. Sie müssen in der Komponente alle IonButtons, IonCard usw. wieder importieren
+
+  3. Wir wollen beim Aufruf einen Parameter [eintrag] mit dem aktuellen item übergeben.
+     [eintrag]="item"  entspricht 
+     eintrag = "{{item}}
+
+     ist aber in diesem Kontext übersichtlicher.
+     Um diesen Parameter in der Komponente einlesen zu können, definieren wir 
+
+     export class EintragComponent implements OnInit {
+     @Input() eintrag: EintragData = {} as EintragData;
+
+     EintragData ist dabei das Interface, welches wir im GetdataService angelegt haben. Damit wir hier darauf zugreifen können,
+     müssen Sie vor der Definition in getdata.service.ts ein export schreiben.
+
+     Dann können Sie es in der Komponente importieren. Auch das Input müssen Sie importieren:
+
+     import { Component, Input, OnInit } from '@angular/core';
+     import { EintragData } from '../../services/getdata.service';
+
+     Jetzt können Sie im HTML-Template der Komponente auf die Daten zugreifen, z.B. eintrag.titel
+
+Das sollte es schon gewesen sein...
+
+
+
+Deepcopy
+
+Wenn man mit Eigenschaften und Variablen umgeht, dann gibt es eine Sache, die man grundsätzlich verstanden haben muss, da man sonst recht schnell Fehler machen kann,
+die zu Beheben einige Zeit dauern wird (schwieriger Satz).
+
+Die folgenden Übungen sind nur gedacht dazu, Ihnen die Problematik zu veranschaulichen. Dazu können Sie den angegebenen Quelltext in 
+irgendeinen Constructor einer Ihrer Seiten packen und sich die Ergebnisse in der Console anschauen.
+
+
+Beginnen wir mit was Simplem:
+
+let a = 100;
+let b = a;
+console.log(a,b);
+
+Die Ausgabe zeigt 100 - 100.
+
+ergänzen Sie folgende Zeilen:
+
+a = 120;
+console.log(a,b);
+
+Die Ausgabe zeigt 120 - 100.
+
+Soweit so gut. Sie haben den Speicherinhalt der Variablen a genommen und im Speicher der Variablen b abgelegt, dann den Speicherinhalt der Variablen a verändert.
+
+a ist eine number und dies ist ein primitiver Datentyp. Primitive oder einfache Datentypen werden in Javascript und Typescript by Value (als Wert) kopiert.
+
+Dies gilt für alle folgenden einfachen Datentypen:
+
+| Typ         | Beispiel             |
+| ----------- | -------------------- |
+| `number`    | `let a = 42;`        |
+| `string`    | `let a = 'Hallo';`   |
+| `boolean`   | `let a = true;`      |
+| `undefined` | `let a = undefined;` |
+| `null`      | `let a = null;`      |
+| `bigint`    | `let a = 123n;`      |
+| `symbol`    | `let a = Symbol();`  |
+
+Verwendet man jedoch Objekte, Arrays oder Funktionen (was in Javascript geht!), dann wird by Reference (als Referenz) kopiert.
+Das bedeutet, dass die Variable, die z.B. ein Array enthält, auf einen Speicherbereich zeigt, in dem die eigentlichen Daten abgelegt sind.
+Die Variable enthält also nicht einen konkreten Wert, sondern nur die Adresse einer anderen Speicherstelle.
+
+Ein Beispiel:
+
+let objA = { name: "Anna" }
+console.log (objA.name);
+
+objA ist ein JS-Objekt mit der Eigenschaft name. Über die Punktnotation objA.name kann ich auf diese Eigenschaft (was nix anderes als eine Variable ist) zugreifen.
+
+let objB = objA;
+console.log(objB);
+
+ergibt die Ausgabe: {name: "Anna"}
+
+Es wirkt wie eine Kopie.
+Angenommen, Sie wollen die eingelesenen Daten von der JSON-Schnittstelle verändern, in dem Sie z.B. nur noch die Elemente haben wollen, die einem Suchbegriff zugeordnet werden können.
+Dann wollen Sie nicht Ihre Originaldaten zerhacken, um sie notfalls wieder einlesen zu müssen.
+
+Statt dessen machen Sie eine Kopie.
+
+Wenn Sie jetzt jedoch dieses Objekt objB manipulieren, dann manipulieren Sie gleichzeitig objA:
+
+objB.name="Jörg";
+console.log(objA, objB);
+
+Die Ausgabe ist zweimal:
+{name: "Jörg"}
+
+Warum? Nun, Sie weisen objB einfach nur die Speicheradresse zu, die in objA drin steht und die auf die eigentlichen Daten verweist.
+Die eigentlichen Daten werden aber nicht dupliziert.
+
+Es gibt jedoch seit ECMAScript 2021 (= Standard von Javascript) eine Funktion structuredClone(), die einen richtiges Deepcopy ermöglicht.
+Als Deepcopy wird eine vollständige Kopie selbst einer verschachtelten Datenstruktur bezeichnet.
+Also von sowas z.B.:
+
+const personen = [
+  {
+    vorname: "Anna",
+    nachname: "Müller",
+    adresse: {
+      strasse: "Hauptstraße",
+      hausnummer: "12a",
+      plz: "04109",
+      ort: "Leipzig"
+    }
+  },
+  {
+    vorname: "Lukas",
+    nachname: "Schneider",
+    adresse: {
+      strasse: "Bahnhofstraße",
+      hausnummer: "8",
+      plz: "01067",
+      ort: "Dresden"
+    }
+  }
+];
+
+Es gibt verschiedene Möglichkeiten, sogenannte Shallow Copies zu erstellen, dabei handelt es sich um Kopien, in der nur die oberste Ebene wirklich kopiert wird (by value), 
+während die tieferen Ebenen nur referenziert sind (by reference).
+
+Neben der Funktion structuredClone() war vorher die einzige Möglichkeit, eine Deepcopy zu erstellen, die Vorgehensweise, die Daten in einen JSON-String zu verwandeln und 
+diesen dann wieder zu parsen...
+
+const neuPersonen = JSON.parse(JSON.stringify(personen));
+
+Wenn Sie z.B. Einträge aus unserer Liste an die Eintrag-Komponente als Parameter übergeben, dann haben Sie in der Komponente Zugriff auf die Original-Daten.
+
+Das ist in dieser Anwendung nicht wirklich relevant, da wir keine Änderungen vornehmen.
+
+Aber angenommen, sie wollten ermöglichen, dass ich einen solchen Eintrag ändern kann. Dann wäre es hilfreich, auf einer Kopie zu arbeiten, 
+um am Ende z.B. auch den Vorgang abbrechen zu können.
+
+Was aber nun, wenn ich die Kopie bearbeitet habe und die Daten wieder in das Original übernehmen will?
+
+const personen = [
+  { vorname: 'Anna', nachname: 'Müller', adresse: { ort: 'Leipzig' } },
+  { vorname: 'Lukas', nachname: 'Schneider', adresse: { ort: 'Dresden' } }
+];
+
+// Du übergibst eine Kopie von personen[1] an die Edit-Komponente:
+const editPerson = structuredClone(personen[1]);
+
+// Daten verändern:
+editPerson.adresse.ort = "Berlin";
+
+Zurückspeichern ins Original:
+
+personen[1] = editPerson;
+
+Hier wird das Objekt personen[1] komplett durch die Kopie ersetzt. D.h. personen[1] zeigt jetzt auf den Speicherbereich, den wir mit structuredClone erst
+erzeugt hatten.
+Sollte jetzt editPerson gelöscht werden (weil es z.B. eine lokale Variable in einer Methode war und die Methode wird beendet), so existiert eine weitere Referenz auf 
+diesen Speicherbereich und daher wird er nicht gelöscht.
+
+Wichtig: Die Referenz auf die alten Daten gehen verloren, die alten Daten werden gelöscht, wenn keine Referenz mehr auf sie zeigt.
+
+Etwas aufwändiger, aber im Prinzip ähnlich:
+personen[1] = structuredClone(editPersonen)
+
+Bei diesen einfachen Varianten kann es zu Problemen kommen.
+
+z.B. beim gleichzeitigen Arbeiten in mehreren Komponenten:
+
+componentA.person = personen[1];
+componentB.person = personen[1];
+
+this.personen[1] = editPerson;
+
+componentA und componentB zeigen noch auf die alten Daten!
+
+
+Wichtig ist, dass Sie sich der Problematik bewusst sind und sich damit beim Fehlersuchen evtl. in die richtige Richtung bewegen.
+
+

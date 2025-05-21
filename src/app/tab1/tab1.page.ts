@@ -1,5 +1,5 @@
 import { Component } from '@angular/core';
-import { IonButtons,IonHeader, IonToolbar, IonTitle, IonContent, IonButton } from '@ionic/angular/standalone';
+import { IonButtons, IonHeader, IonToolbar, IonTitle, IonContent, IonButton } from '@ionic/angular/standalone';
 import { ExploreContainerComponent } from '../explore-container/explore-container.component';
 
 @Component({
@@ -9,5 +9,23 @@ import { ExploreContainerComponent } from '../explore-container/explore-containe
   imports: [IonButton, IonHeader, IonToolbar, IonTitle, IonContent, ExploreContainerComponent],
 })
 export class Tab1Page {
-  constructor() {}
+  constructor() {
+
+    let a = 100;
+    let b = a;
+    console.log(a, b);
+
+    a = 120;
+    console.log(a, b);
+
+    let objA = { name: "Anna" }
+    console.log(objA.name);
+
+    let objB = objA;
+    console.log(objB);
+
+    objB.name="Jörg";
+console.log(objA, objB);
+
+  }
 }

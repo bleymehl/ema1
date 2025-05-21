@@ -4,7 +4,7 @@ import CordovaSQLiteDriver from 'localforage-cordovasqlitedriver';
 
 // Datenstruktur für die eingehenden Daten
 
-interface EintragData {
+export interface EintragData {
   id: string;
   termin_id: string;
   titel: string;

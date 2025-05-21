@@ -1,10 +1,32 @@
 <ion-header [translucent]="true">
   <ion-toolbar>
     <ion-title>
-      Tab 3
+      Programm
     </ion-title>
   </ion-toolbar>
+  <ion-toolbar >
+    <ion-segment [scrollable]="true" *ngIf="!showSearch" [(ngModel)]="selectedSegment" class="fixed-segment">
+      <ion-segment-button value="Komplett" (click)="setSegmentLabel('Komplett'); setEintraege()">
+        <ion-icon src="../../../assets/myicons/Programm.svg"></ion-icon>
+      </ion-segment-button>
+      <ion-segment-button value="Themen" (click)="setSegmentLabel('Themen'); setEintraege()">
+        <ion-icon src="../../../assets/myicons/Themen.svg"></ion-icon>
+      </ion-segment-button>
+      <ion-segment-button value="Formate" (click)="setSegmentLabel('Formate'); setEintraege()">
+        <ion-icon src="../../../assets/myicons/Formate.svg"></ion-icon>
+      </ion-segment-button>
+      <ion-segment-button value="Orte" (click)="setSegmentLabel('Orte'); setEintraege()">
+        <ion-icon src="../../../assets/myicons/orte.svg"></ion-icon>
+      </ion-segment-button>
+      <ion-segment-button value="Einrichtungen" (click)="setSegmentLabel('Einrichtungen'); setEintraege()">
+        <ion-icon src="../../../assets/myicons/Einrichtungen.svg"></ion-icon>
+      </ion-segment-button>
+    </ion-segment>
+    <!-- Suchfeld unterhalb des Headers -->
+    <ion-searchbar placeholder="Suche..." ></ion-searchbar>
+  </ion-toolbar>
 </ion-header>
+
 
 <ion-content [fullscreen]="true">
   <ion-header collapse="condense">
@@ -13,5 +35,5 @@
     </ion-toolbar>
   </ion-header>
 
-  <app-explore-container name="Tab 3 page"></app-explore-container>
+ 
 </ion-content>
