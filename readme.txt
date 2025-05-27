@@ -895,4 +895,266 @@ componentA und componentB zeigen noch auf die alten Daten!
 
 Wichtig ist, dass Sie sich der Problematik bewusst sind und sich damit beim Fehlersuchen evtl. in die richtige Richtung bewegen.
 
+// Routing
 
+Routing bedeutet, dass eine Anwendung verschiedene Seiten oder Ansichten (engl. views) bereitstellen kann, zwischen denen der
+Nutzer wechseln kann – ähnlich wie bei klassischen Webseiten mit unterschiedlichen URLs.
+
+In einem Ionic/Angular-Projekt bedeutet das:
+
+- Jede Seite hat eine eigene URL.
+- Beim Navigieren wird die angezeigte Komponente geändert, ohne dass die ganze App neu geladen wird.
+
+Grundbegriffe:
+Begriff	      Bedeutung
+Route	        Eine Zuordnung von URL zu Komponente.
+Pfad (path)	  Der Teil der URL, der zu einer bestimmten Seite führt (z. B. /home).
+Router	      Der Angular-Dienst, der die Navigation übernimmt.
+RouterOutlet	Platzhalter im HTML, wo die jeweils aktive Seite angezeigt wird.
+
+Routing-Struktur:
+
+Die Routing-Struktur wird in der datei app.routes.ts definiert, welche beim Projektstart in der Datei main.ts eingebunden wird:
+
+import { routes } from './app/app.routes';
+
+bootstrapApplication(AppComponent, {
+  providers: [
+    provideRouter(routes),
+    ...
+  ],
+});
+
+Die Routen stellen ein Array aus einzelnen Pfaden dar:
+
+// app.routes.ts (bei Standalone-Komponenten)
+import { Routes } from '@angular/router';
+import { HomePage } from './home/home.page';
+import { DetailsPage } from './details/details.page';
+
+export const routes: Routes = [
+  {
+    path: '',
+    component: HomePage, // Standardseite
+  },
+  {
+    path: 'details',
+    component: DetailsPage,
+  },
+];
+
+Bei Aufruf des Pfades wird die jeweils angegebene Komponente dort eingesetzt, wo sich das Tag <ion-router-outlet> befindet.
+Die ist in unserem Fall in der app.component.html:
+
+<ion-app>
+  <ion-router-outlet></ion-router-outlet>
+</ion-app>
+
+Wollen Sie etwas ergänzen, das z.B. als überlagertes Menü arbeitet und unabhängig von der Navigation immer da ist, 
+so könnten Sie dies in der app.component.html tun.
+
+In unserem Fall mit den Tabs, gibt es eine weitere Unternavigation. In unserer app.routes.ts steht:
+
+  {
+    path: '',
+    loadChildren: () => import('./tabs/tabs.routes').then((m) => m.routes),
+  },
+
+und wir haben eine Datei tabs.routes.ts, in der die einzelnen Routen der Tabs aufgelistet sind.
+Für eine komplexe App mit vielen Seiten und möglichen Unternavigationen ist die Aufteilung der Routen auf verschiedene
+.routes-Dateien sinnvoll, da es außerdem zu Performance-Vorteilen kommen kann. Eine Unternavigation wird erst geladen,
+wenn sie benötigt wird.
+Ich habe in meinem Projekten jedoch sämtliche Routen direkt in die app.routes.ts geschrieben, das erschien mir erst mal 
+übersichtlicher.
+
+
+Wollen wir jetzt eine Anzeige für die Details eines Eintrags umsetzen, so erstellen wir zuerst die Seite dazu:
+
+ionic g page eintragDetails
+
+
+Für unseren Fall wäre dann die apps.routes.ts z.B.:
+
+import { Routes } from '@angular/router';
+import { TabsPage } from './tabs/tabs.page';
+
+export const routes: Routes = [
+  {
+    path: 'tabs',
+    component: TabsPage,
+    children: [
+      {
+        path: 'tab1',
+        loadComponent: () =>
+          import('./tab1/tab1.page').then((m) => m.Tab1Page),
+      },
+      {
+        path: 'tab2',
+        loadComponent: () =>
+          import('./tab2/tab2.page').then((m) => m.Tab2Page),
+      },
+      {
+        path: 'tab3',
+        loadComponent: () =>
+          import('./tab3/tab3.page').then((m) => m.Tab3Page),
+      }
+    ],
+  },
+  {
+    path: 'eintrag-details/:id/:termin_id',
+    loadComponent: () => import('./eintrag-details/eintrag-details.page').then(m => m.EintragDetailsPage)
+  },
+  {
+    path: '',
+    redirectTo: '/tabs/tab1',
+    pathMatch: 'full',
+  },
+]
+
+
+EintragDetails soll außerhalb der Tabs-Navigation angezeigt werden, d.h. die Tabs sollen nicht mehr sichtbar sein.
+Daher ist es bei den Routen auf der Ebene der Tabs. 
+
+/:id/:termin_id  besagt, dass ich in der URL zwei Parameter anhängen will, nämlich die id und die termin_id des
+ausgewählten Eintrags.
+
+Um nun zu diesem Eintrag zu navigieren, ergänze ich in meiner Liste, in der alle app-eintrag-Elemente aufgelistet werden 
+einen Event-Handler:
+
+  <div *ngFor="let item of getdataservice.data">
+    <app-eintrag (click)="zeigeEintrag(item)" [eintrag]="item"></app-eintrag>
+  </div >
+
+Und ergänze diese Methode in der entsprechenden ts-Datei:
+
+  zeigeEintrag(item: EintragData) {
+    // Hier wird der Eintrag angezeigt, z.B. durch Navigation zu einer Detailseite
+    this.router.navigate(['/eintrag-details', item.id, item.termin_id]);
+  }
+
+
+Zwei Dinge muss ich hier zuerst importieren:
+1. das Interface EintragData, welches in getDataService definiert wurde und (hoffentlich) mit export interface markiert ist:
+
+import { GetdataService, EintragData } from '../services/getdata.service';
+
+2. ich muss den Router importieren und injizieren:
+
+import { Router } from '@angular/router';
+
+ constructor(public getdataservice: GetdataService, private router: Router) 
+
+Dann sollte ein Klick auf einen Eintrag die neue Seite öffnen.
+
+Zwei offene Fragen:
+1. Wie komme ich wieder zurück?
+2. Wie greife ich auf die übergebenen Parameter zu und erhalte dann die Daten meines Eintrags?
+
+
+Der Rückweg geht recht einfach, in dem Sie den Header in der HTML-Datei wie folgt definieren:
+
+<ion-header [translucent]="true">
+  <!-- Mit Zurück-Button -->
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/tabs/tab2"></ion-back-button>
+    </ion-buttons>
+    <ion-title>Eintrag Details</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+Natürlich noch die entsprechenden Tags importieren...
+Bei Klick auf den Button springen Sie zurück zu /tabs/tab2 oder was Ihre Auswahlseite ist.
+
+Um auf die Parameter zuzugreifen ergänzen Sie folgenden Quellcode:
+
+Sie brauchen folgende Imports:
+import { GetdataService, EintragData } from '../services/getdata.service';
+import { ActivatedRoute } from '@angular/router';
+
+und folgende Klassendefinition:
+
+export class EintragDetailsPage implements OnInit {
+
+  id: string = '';
+  termin_id: string = '';
+  eintrag: EintragData = {} as EintragData; // Initialisierung mit leerem Objekt
+
+
+
+  constructor(private getDataService: GetdataService, private route: ActivatedRoute) { }
+
+  ngOnInit() {
+    this.id = this.route.snapshot.paramMap.get('id') ?? '';
+    this.termin_id = this.route.snapshot.paramMap.get('termin_id') ?? '';
+    // Eintrag anhand der ID suchen
+    this.eintrag = this.getDataService.data.find(item => item.id === this.id && item.termin_id === this.termin_id)!;
+    console.log('Eintrag Details:', this.eintrag);
+  }
+
+}
+
+Einen besonderen Augenmerk möchte ich auf den Operator ?? lenken.
+
+Habe ich diese Woche erst durch die KI kennen gelernt:
+
+?? ist der sogenannte Null-Koaleszenz-Operator (Null Coalescing Operator). 
+Er gibt den linken Wert zurück, wenn dieser existiert und nicht null ist, andernfalls den rechten Wert.
+
+
+this.eintrag = this.getDataService.data.find(item => item.id === this.id && item.termin_id === this.termin_id)!;
+
+Wir wenden auf unser Array mit den Daten (this.getDataService.data) die find-Methode an. Diese ruft eine 
+Arrow-Funktion auf und übergibt einen Eintrag unseres Arrays nach dem anderen im Parameter item. Die Rückgabe dieser
+Funktion ist die Auswertung des logischen Ausdrucks.
+
+item => item.id === this.id && item.termin_id === this.termin_id
+
+stellt eine abgekürzte Schreibweise dar für
+(item) => {
+  console.log(item.titel);
+  return item.id === 42;
+}
+Wenn ich also in der Funktion nur den return-Befehl nutze, kann ich die {} und return weglassen.
+
+Was wiederum in etwa folgender Schreibweise entspricht:
+
+function suchwas(item) {
+  console.log(item.titel);
+  return item.id === 42; 
+}
+
+this.getDataService.data.find(suchwas);
+
+Bei dem letzeren Beispiel gibt es dann aber Probleme mit dem this, welches sich hier auf etwas anderes bezieht.
+
+Die Methode find() liefert einen Eintrag zurück, bzw. undefined, wenn nichts gefunden wird.
+Daher muss eigentlich this.eintrag sowohl einen Rückgabewert von Typ EintragData als auch undefined speichern können.
+
+Sie müsste dann wie folgt definiert werden:
+
+eintrag: EintragData | undefined;
+
+Da wir aber sicher sind, dass der Eintrag vorhanden ist, da wir ja in der Liste einen Eintrag mit der id und termin_id
+angeklickt haben, können wir durch das abschließende !, den Non-null Assertion Operator, festlegen, dass es auf jeden Fall
+einen Wert von Typ EintragData geben wird. Es werden dann keine Fehler mehr angezeigt beim Compilieren.
+
+Wichtig, aber für unsere Anwendung irrelevant: find() liefert eine Referenz auf den Eintrag zurück.
+Würden wir Daten ändern, wären diese auch in den Gesamtdaten geändert.
+
+Nur mal zum Experimentieren:
+ this.eintrag = this.getDataService.data.find(item => item.id === this.id && item.termin_id === this.termin_id)!;
+    this.eintrag.titel = "geändert";  // Eintragstitel ändern
+    console.log(this.getDataService.data); // in den Originaldaten ist es geändert.
+    console.log('Eintrag Details:', this.eintrag);
+
+Was aber die Verwirrung komplett macht und es unter Umständen erschwert, einen solchen Fehler zu finden:
+Wenn Sie auf den Back-Button klicken, steht in der Liste immer noch der ursprüngliche Titel.
+
+Angular hat hier nicht mitbekommen, dass Sie Daten verändert haben. Hätten Sie ein neues Objekt generiert und somit eine andere 
+Referenz erzeugt, dann wäre ein Update erfolgt. Wir haben aber keine Referenzänderung, sondern nur einen Wert einer Eigenschaft 
+eines referenzierten Objekts verändert.
+
+Jetzt können Sie die Detailseite entsprechend ausbauen...
+
+Fortsetzung folgt....

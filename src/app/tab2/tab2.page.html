@@ -1,7 +1,7 @@
 <ion-header [translucent]="true">
   <ion-toolbar>
     <ion-title>
-      Tab 2
+      Programm
     </ion-title>
   </ion-toolbar>
 </ion-header>
@@ -15,9 +15,7 @@
 
 
   <div *ngFor="let item of getdataservice.data">
-    <app-eintrag [eintrag]="item"></app-eintrag>
+    <app-eintrag (click)="zeigeEintrag(item)" [eintrag]="item"></app-eintrag>
   </div >
 
-  <ion-button (click)="getdataservice.incrementCounter()">Increment</ion-button>
-  <ion-button (click)="getdataservice.decrementCounter()">Decrement</ion-button>
 </ion-content>

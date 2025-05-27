@@ -1,0 +1,77 @@
+ion-card {
+    margin: 8px;
+    padding: 0;
+    font-size: 14px;
+    border-radius: 8px;
+    box-shadow: 1px 2px 4px 1px rgba(0, 0, 0, 0.4);
+    border-color: #020202;
+    border-width: 1px;
+}
+
+ion-card-header {
+    background-color: #f5f3f5;
+    color: #4b3991;
+    padding: 12px;
+}
+
+ion-card-subtitle {
+    font-size: 12px;
+    color: #4b3991;
+    display: flex;
+    align-items: center;
+}
+
+ion-card-title {
+    font-size: 16px;
+    color: #4b3991;
+}
+
+.info-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 8px;
+}
+
+.icon-children {
+    color: #f6692c;
+    margin-right: 4px;
+    font-size: 20px;
+}
+
+.label-children {
+    color: #f6692c;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.label-separator {
+    color: #f6692c;
+    font-weight: bold;
+    font-size: 14px;
+    margin-left: 8px;
+    margin-right: 8px;
+    text-align: center;
+}
+
+.format-label {
+    font-size: 14px;
+    color: #4b3991;
+    text-align: right;
+    margin-left: auto;
+}
+
+.favorite-icon {
+    color: #f6692c; // Beispiel für eine rote Farbe
+    font-size: 24px; // Beispiel für eine größere Größe
+}
+
+// Class Uhr: etwas Abstand nach rechts
+.uhr {
+    margin-right: 4px;
+}
+
+
+br {
+    display: block;
+}

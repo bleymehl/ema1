@@ -1,3 +1,31 @@
-<p>
-  eintrag works!
-</p>
+<ion-card>
+    <ion-card-header>
+        <ion-card-title [innerHTML]="myTitel">
+        </ion-card-title>
+        <ion-card-subtitle style="display: flex; justify-content: space-between; align-items: center;">
+            <!-- Überprüfe, ob timeTo gleich timeFrom ist -->
+            <span *ngIf="eintrag.beginn !== eintrag.ende"><ion-icon class="uhr" name="time-outline"></ion-icon>{{
+                eintrag.beginn }} - {{ eintrag.ende }} Uhr</span>
+            <span *ngIf="eintrag.beginn === eintrag.ende"><ion-icon class="uhr" name="time-outline"></ion-icon>{{
+                eintrag.beginn }} Uhr</span>
+            <!-- Herz hinzufügen, wenn favorite true ist -->
+            <ion-icon *ngIf="eintrag.favorit" name="heart" class="favorite-icon"></ion-icon>
+        </ion-card-subtitle>
+    </ion-card-header>
+
+    <ion-card-content>
+        <div>
+            <p *ngIf="myBeschreibung !== ''" [innerHTML]="myBeschreibung"></p>
+            <div class="info-row">
+                <ion-icon  *ngIf="eintrag.kinder" src="../../../assets/myicons/lndw_icon_kids.svg" class="icon-children"></ion-icon>
+            <span *ngIf="eintrag.kinder && (eintrag.barrierefrei || eintrag.english)" class="label-separator">|</span>
+                <ion-icon *ngIf="eintrag.barrierefrei" src="../../../assets/myicons/lndw_icon_barrierenfrei.svg" class="icon-children"></ion-icon>
+            <span *ngIf="eintrag.english && eintrag.barrierefrei" class="label-separator">|</span>
+                <ion-icon *ngIf="eintrag.english" src="../../../assets/myicons/lndw_icon_englisch.svg"
+                    class="icon-children"></ion-icon>
+                <span class="format-label">{{ eintrag.format }}</span>
+            </div>
+        </div>
+    </ion-card-content>
+    
+</ion-card>

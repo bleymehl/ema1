@@ -1,0 +1,20 @@
+<ion-header [translucent]="true">
+  <!-- Mit Zurück-Button -->
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/tabs/tab2"></ion-back-button>
+    </ion-buttons>
+    <ion-title>Eintrag Details</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true">
+  <ion-header collapse="condense">
+    <ion-toolbar>
+      <ion-title size="large">eintragDetails</ion-title>
+    </ion-toolbar>
+  </ion-header>
+
+  {{ eintrag.titel }}
+
+</ion-content>
