@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Storage } from '@ionic/storage-angular'; // *****
 import CordovaSQLiteDriver from 'localforage-cordovasqlitedriver';
+import { BehaviorSubject } from 'rxjs';
 
 // Datenstruktur für die eingehenden Daten
 
@@ -42,6 +43,8 @@ export interface Favorit {
 
 export class GetdataService {
 
+  public dataLoaded = false;
+
   // Data als Array von EintragData
   data: EintragData[] = [];
   // Orte als Array von OrteData
@@ -50,6 +53,8 @@ export class GetdataService {
   favoriten: Favorit[] = [];
 
   counter = 0;
+
+
 
   constructor(private storage: Storage) {
     // Storage initialisieren
@@ -70,6 +75,7 @@ export class GetdataService {
         this.toogleFavorit(this.data[0].id, this.data[0].termin_id);
         console.log('Favoriten:', this.favoriten);
         console.log('isFavorit:', this.isFavorit(this.data[0].id, this.data[0].termin_id));
+        this.dataLoaded = true;
       });
     }
     );

@@ -1,8 +1,37 @@
 <ion-header [translucent]="true">
-  <ion-toolbar>
-    <ion-title>
-      Programm
+  <ion-toolbar class="header-colored">
+    <ion-buttons slot="start">
+      <ion-button (click)="openInfo()">
+        <ion-icon slot="icon-only" name="information-circle-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-title class="title-white">
+      <span *ngIf="segmentLabel != 'Suchergebnisse'">{{segmentLabel}}</span>
     </ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="toggleSearch()">
+        <ion-icon slot="icon-only" name="search-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+  <ion-toolbar class="toolbar-normal">
+    <ion-segment [scrollable]="true" [(ngModel)]="selectedSegment" class="segment-normal">
+      <ion-segment-button value="Komplett" (click)="setSegmentLabel('Komplett'); setEintraege()">
+        <ion-icon src="../../../assets/myicons/Programm.svg"></ion-icon>
+      </ion-segment-button>
+      <ion-segment-button value="Themen" (click)="setSegmentLabel('Themen'); setEintraege()">
+        <ion-icon src="../../../assets/myicons/Themen.svg"></ion-icon>
+      </ion-segment-button>
+      <ion-segment-button value="Formate" (click)="setSegmentLabel('Formate'); setEintraege()">
+        <ion-icon src="../../../assets/myicons/Formate.svg"></ion-icon>
+      </ion-segment-button>
+      <ion-segment-button value="Orte" (click)="setSegmentLabel('Orte'); setEintraege()">
+        <ion-icon src="../../../assets/myicons/orte.svg"></ion-icon>
+      </ion-segment-button>
+      <ion-segment-button value="Einrichtungen" (click)="setSegmentLabel('Einrichtungen'); setEintraege()">
+        <ion-icon src="../../../assets/myicons/Einrichtungen.svg"></ion-icon>
+      </ion-segment-button>
+    </ion-segment>
   </ion-toolbar>
 </ion-header>
 
@@ -13,9 +42,16 @@
     </ion-toolbar>
   </ion-header>
 
-
-  <div *ngFor="let item of getdataservice.data">
+<div *ngIf="contentSelector === 'Komplett'">
+  <div *ngFor="let item of getdataservice.data | slice:0:visibleEntries; let i = index">
+    <div *ngIf="setBeginn(item, i)">
+      <h2>{{ item.beginn }} Uhr</h2>
+    </div>
     <app-eintrag (click)="zeigeEintrag(item)" [eintrag]="item"></app-eintrag>
-  </div >
-
+  </div>
+  <ion-infinite-scroll (ionInfinite)="ladeMehrDaten($event)">
+    <ion-infinite-scroll-content loadingSpinner="bubbles" loadingText="Lade mehr Einträge...">
+    </ion-infinite-scroll-content>
+  </ion-infinite-scroll>
+</div>
 </ion-content>

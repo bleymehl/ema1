@@ -1,3 +1,13 @@
 <ion-app>
+<div *ngIf="getDataService.dataLoaded">
+  <!-- App Content -->
   <ion-router-outlet></ion-router-outlet>
+</div>
+<!-- Loading Overlay mit Spinner und Text -->
+<div *ngIf="!getDataService.dataLoaded" class="loading-overlay">
+  <div class="loading-box">
+    <ion-spinner></ion-spinner>
+    <p>Daten werden geladen...</p>
+  </div>
+</div>
 </ion-app>

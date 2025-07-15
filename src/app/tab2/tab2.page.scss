@@ -1,3 +1,18 @@
 ion-card-header {
   background-color: #f0f0f0;
 }
+
+.header-colored {
+    --background: url('../../assets/bg2.png') center center / cover no-repeat;
+    color: white;
+
+    // Optional: damit Buttons und Text sichtbar bleiben
+    ion-title {
+        color: white;
+        font-size: 1.0rem;
+    }
+
+    ion-icon {
+        color: white;
+    }
+}

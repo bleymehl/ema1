@@ -1,0 +1,30 @@
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.5);
+    /* Halbtransparenter Hintergrund */
+    z-index: 1000;
+    /* Sicherstellen, dass es oben angezeigt wird */
+}
+
+.loading-box {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+}
+
+ion-spinner {
+    margin-bottom: 10px;
+    /* Abstand zwischen Spinner und Text */
+}

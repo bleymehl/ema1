@@ -1158,3 +1158,412 @@ eines referenzierten Objekts verändert.
 Jetzt können Sie die Detailseite entsprechend ausbauen...
 
 Fortsetzung folgt....
+
+App erst starten, wenn die Daten geladen wurden.
+
+Im Moment ist es so, dass die Daten asynchron geladen werden, auch wenn wir die Seiten schon aufbauen. Ändern sich die Daten in unserem Array, dann wird automatisch
+die Anzeige angepasst. Wenn wir jetzt um ein Unendliches Scrollen erweitern wollen, das so genannte "Infinity scroll", dann müssen unsere Daten aber bereits vorhanden sein.
+Wir können noch mal reagieren, wenn die Daten geladen sind, oder wir starten die App im Prinzip erst, wenn die Daten da sind. 
+In der LNDW App habe ich mich für die zweite Möglichkeit entschieden.
+
+Die ist relativ einfach umzusetzen:
+
+Die erste Komponente, die überhaupt die anderen Seiten lädt, ist die app.component.
+Diese definiert das Tag <app-root> im @Component-Deklarator in der app.component.ts.
+
+Dieses Tag findet sich in der index.html-Datei wieder, die im Hauptverzeichnis liegt:
+
+<body>
+  <app-root></app-root>
+</body>
+
+Mehr ist an HTML nicht in der index.html vorhanden, diese Datei rühren wir eigentlich auch nie an.
+
+Die app.component.html sieht in unserem Fall so aus:
+
+<ion-app>
+  <ion-router-outlet></ion-router-outlet>
+</ion-app>
+
+<ion-router-outlet> wird dabei jeweils durch die Komponente ersetzt, die wir bei den Routen angeben (also bei uns app.routes.ts).
+
+Wir können aber hier eine Bedingung einfügen:
+
+<ion-app>
+<div *ngIf="getDataService.dataLoaded">
+  <!-- App Content -->
+  <ion-router-outlet></ion-router-outlet>
+</div>
+<!-- Loading Overlay mit Spinner und Text -->
+<div *ngIf="!getDataService.dataLoaded" class="loading-overlay">
+  <div class="loading-box">
+    <ion-spinner></ion-spinner>
+    <p>Daten werden geladen...</p>
+  </div>
+</div>
+</ion-app>
+
+Wir definieren in der getData.service.ts eine Eigenschaft dataloaded, die zu Beginn false ist und nach dem Laden der Daten auf true gesetzt wird.
+Damit wird der eigentliche Inhalt erst angezeigt, wenn die Daten geladen wurden.
+
+Ansonsten wird eine Meldung mit einem Spinner angezeigt, dass die Daten geladen werden.
+
+Und damit das schön aussieht, folgendes in app.component.css packen:
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.5);
+    /* Halbtransparenter Hintergrund */
+    z-index: 1000;
+    /* Sicherstellen, dass es oben angezeigt wird */
+}
+
+.loading-box {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+}
+
+ion-spinner {
+    margin-bottom: 10px;
+    /* Abstand zwischen Spinner und Text */
+}
+
+Ergänzen Sie die app.component.ts-Datei wie folgt:
+
+import { CommonModule } from '@angular/common'; // Wegen des *ngIf
+import { Component } from '@angular/core';
+import { IonApp, IonRouterOutlet,IonSpinner } from '@ionic/angular/standalone'; // Spinner ergänzen
+import { GetdataService } from './services/getdata.service';  // Service importieren
+
+@Component({
+  selector: 'app-root',
+  templateUrl: 'app.component.html',
+  imports: [IonApp, IonRouterOutlet, IonSpinner, CommonModule], 
+  styleUrls: ['app.component.scss'], // ergänzen, falls es fehlt
+})
+export class AppComponent {
+  constructor(public getDataService: GetdataService) {} // Service injizieren
+}
+
+Import nicht vergessen. 
+Hier ein Hinweis: Wenn Sie GetdataService an der Stelle im constructor tippen, dann wird Ihnen von Autovervollständigen gereits der Service vorgeschlagen. 
+Wenn Sie dann einfach nur Enter tippen, wird der Import automatisch hinzugefügt. Bei den eigenen Services klappt das prima, bei denen von Angular oder Ionic kann es
+manchmal zu Verwechslungen kommen.
+
+Wir müssen in der getdata.service.ts noch die Eigenschaft dataloaded ergänzen:
+
+export class GetdataService {
+
+  public dataLoaded = false;
+
+
+Jetzt sollte der Spinner erscheinen. Da wir dataLoaded nicht auf true setzen, bleibt das auch so.
+
+Suchen Sie selbst die Stelle in getDataService, wo Sie this.dataLoaded = true einfügen.
+
+Fortsetzung folgt....
+
+
+
+
+Infinity-Scroll
+
+Wie Sie sicherlich bemerkt haben, ist die Liste der Veranstaltungen mittlerweile recht lang geworden (aktuell 669 Einträge).
+In der App ist es so gelöst, dass erst mal nur 50 Einträge angezeigt werden. Wird weitergescrollt, erscheint kurz ein "Spinner" und es
+werden weitere 50 Einträge angehangen. Dadurch wird das Rendering der Einträge schneller.
+
+Hierfür gibt es ein spezielles ion-Tag, das ion-infinite-scroll-Tag.
+
+Infinity-Scroll (auch „endloses Scrollen“ genannt) ist ein Pattern, bei dem beim Scrollen automatisch weitere Inhalte nachgeladen werden, 
+sobald der Nutzer ans Ende der Liste kommt – ganz ohne manuelle Pagination oder „Mehr laden“-Buttons.
+
+Was passiert im Hintergrund?
+Im Hintergrund funktioniert das so:
+
+- Beobachtung des Scroll-Events: Das System registriert, wenn der Benutzer an das Ende (oder fast ans Ende) der Seite/Liste scrollt.
+- Trigger für Datenladen: Sobald das erkannt wird, wird ein Event ausgelöst, um die nächsten Daten zu laden.
+- Daten anhängen: Neue Daten werden an das bestehende Array (getdataservice.data) angehängt.
+- UI aktualisiert sich automatisch, da Angular bei Änderungen im Array die Ansicht neu rendert.
+
+Bisher sieht unsere Liste in etwa so aus:
+
+<div *ngFor="let item of getdataservice.data">
+    <app-eintrag (click)="zeigeEintrag(item)" [eintrag]="item"></app-eintrag>
+</div >
+
+Wir ergänzen das Ganze in den nächsten Zeilen um:
+
+  <ion-infinite-scroll (ionInfinite)="ladeMehrDaten($event)">
+    <ion-infinite-scroll-content
+      loadingSpinner="bubbles"
+      loadingText="Lade mehr Einträge...">
+    </ion-infinite-scroll-content>
+  </ion-infinite-scroll>
+
+Entsprechend sind natürlich in der TS-Datei die Tags zu importieren.
+
+Es müssen ein paar Eigenschaften in der TS-Datei definiert werden:
+
+  visibleEntries = 30; // Anzahl der aktuell sichtbaren Einträge
+  increment = 30; // Anzahl der Einträge, die pro Klick nachgeladen werden
+
+
+
+Die Methode ladeMehrDaten sieht wie folgt aus:
+
+   ladeMehrDaten(event?: any) {
+    // Überprüfe, ob noch mehr Einträge angezeigt werden können
+    if (this.visibleEntries >= this.getdataservice.data.length) {
+      event.target.disabled = true; // Deaktiviere den Infinite-Scroll
+      event.target.complete(); // Beende den Ladeprozess
+      return; // Keine weiteren Aktionen durchführen
+    }
+
+    setTimeout(() => {
+      this.visibleEntries += this.increment;
+      event.target.complete();
+
+      // Deaktiviere infinite-scroll, wenn alle Einträge angezeigt werden
+      if (this.visibleEntries >= this.getdataservice.data.length) {
+        event.target.disabled = true;
+      }
+    }, 500); // Simulierte Ladezeit
+  }
+
+  }
+
+  Und in der HTML-Datei ist die Schleife selbst wie folgt zu ergänzen:
+
+  <div *ngFor="let item of getdataservice.data | slice:0:visibleEntries">
+    <app-eintrag (click)="zeigeEintrag(item)" [eintrag]="item"></app-eintrag>
+  </div >
+
+getdataservice.data | slice:0:visibleEntries beschreibt die Verarbeitung der Daten mittels einer slice-Pipe.
+Konkret werden nur die Daten von Array-Element 0 bis Array-Element visibleentries zurückgegeben.
+(Am Ende folgt ein kurzer Exkurs zum Thema Pipes)
+
+Was ist nun der Vorteil dieses "Nachladens"? Die Daten sind ja bereits komplett im Speicher
+geladen, wir haben im vorherigen Schritt extra darauf gewartet.
+
+Bei 670 Einträgen muss Angular 670 DOM-Elemente rendern – und ggf. bei jedem Scroll oder Change Detection erneut prüfen.
+Gerade auf älteren Smartphones oder langsamen Browsern kann das zu Ruckeln, verzögerter Scroll-Reaktion oder sichtbarem Nachladen führen.
+Mit visibleEntries wird nur ein Teil gerendert – das hält das UI reaktiv und flüssig.
+
+Aber, die Liste wird immer größer, so dass am Ende doch 670 Elemente gerendert werden müssen,
+und es dazu kommen kann, dass die Ansicht ruckelt.
+
+Sinnvoller wäre es, immer nur einen Teil überhaupt anzuzeigen, also sowas wie
+slice:visibleEntries-30,visibleEntries
+
+Dann müsste man aber auch dafür sorgen, dass beim Zurückscrollen die Elemente wieder geladen werden und
+ein wichtiges Problem in diesem Fall: Durch das Entfernen der oberen Elemente verändert sich die Länge
+des Scrollbereichs und die Anzeige wird sehr wahrscheinlich (und evtl. abhängig vom Endgerät) springen.
+
+Die praktische Überlegung ist daher:
+Wird überhaupt jemand die Liste mit den 670 Einträgen komplett durchscrollen oder lieber gleich
+auf die Suchfunktion oder die Kategorien ausweichen?
+
+Kleiner Exkurs zum Thema Pipes:
+
+Eine Pipe ist ein Hilfswerkzeug in Angular, mit dem man Werte direkt im Template umwandeln oder 
+formatieren kannst – ohne extra Code in der Komponente schreiben zu müssen.
+
+Man erkennt Pipes am senkrechten Strich |.
+
+Beispiele:
+
+<!-- Zahl formatieren -->
+{{ 3.14159 | number:'1.2-2' }}      → 3,14
+
+<!-- Datum formatieren -->
+{{ today | date:'dd.MM.yyyy' }}    → 09.06.2025
+
+<!-- Großbuchstaben -->
+{{ 'hello' | uppercase }}          → HELLO
+
+<!-- Array kürzen -->
+<div *ngFor="let item of eintraege | slice:0:10">
+  {{ item.name }}
+</div>
+
+Warum sind Pipes nützlich?
+
+Sie vereinfachen das Template.
+Du kannst Daten direkt im HTML anzeigen und anpassen, ohne extra Methoden zu schreiben.
+Sie sind leicht zu lesen und helfen, Code übersichtlich zu halten.
+
+Merksatz:
+
+Pipes verarbeiten Daten im Template, so wie ein Wasserrohr (Pipe) Wasser 
+verarbeitet – sie leiten etwas durch und verändern es dabei.
+
+
+Uhrzeiten hervorheben
+
+Die Daten aus der API sind nach Beginn-Uhrzeit geordnet.
+Dies können wir ausnutzen, um in die Auflistung die Uhrzeiten mit anzugeben und zwar immer dann,
+wenn die Uhrzeit beim nächsten Eintrag wechselt.
+
+Dazu implementieren wir in unsere TS-Datei der Seite, auf der die Auflistung erfolgt, folgende Methode:
+
+ // Funktion für das Setzen des aktuellen Beginndatums
+  setBeginn(eintrag: EintragData, index: number): boolean {
+    // Wenn es sich um das erste Element oder ein neues Beginndatum handelt
+    if (index === 0 || eintrag.beginn !== this.lastBeginn) {
+      this.lastBeginn = eintrag.beginn; // Setze den Wert des aktuellen Beginndatums
+      return true; // Zeige das Beginndatum an
+    }
+    return false; // Andernfalls das Beginndatum nicht anzeigen
+  }
+
+  Wir übergeben der Methode zwei Parameter, einmal den aktuellen Eintrag, den wir anzeigen wollen,
+  zum Zweiten den Index dieses Eintrags in unserem Array, welches sämgliche Einträge enthält.
+
+  Die Methode liefert true zurück, wenn es sich um den allerersten Eintrag handelt (index == 0),
+  oder sich der beginn-Wert von dem gespeicherten this.lastBeginn unterscheidet.
+  lastbeginn wird als Eigenschaft der Klasse oben definiert.
+
+  lastBeginn: string = '';  // Verfolgt den letzten Wert von "beginn"
+
+
+  Da dieser Wert zu Beginn auf "" gesetzt wird, würde es im Prinzip ausreichen, auf die Unterscheidung
+  von eintrag.beginn !== this.lastBeginn zu setzen. Allerdings müssen wir dann sicherstellen,
+  dass der Wert von lastBeginn bei einem Neuzeichnen der Seite auch wieder auf "" gesetzt wird.
+  Insoweit ist die Nutzung des Index entspannter.
+
+  Um den Index im Template zu erhalten, müssen wir unser *ngFor wie folgt erweitern:
+
+   <div *ngFor="let item of getdataservice.data | slice:0:visibleEntries; let i = index">
+ 
+ Dies sorgt dafür, dass wir innerhalb der Schleife den Index des aktuellen Eintrags in i
+ gespeichert haben.
+
+ jetzt brauchen wir nur noch folgenden (oder ählichen) Code vor den <app-eintrag> zu stellen:
+
+       <div *ngIf="setBeginn(item, i)">
+        <h2>{{ item.beginn }} Uhr</h2>
+      </div>
+
+
+Also insgesamt:
+
+  <div *ngFor="let item of getdataservice.data | slice:0:visibleEntries; let i = index">
+    <div *ngIf="setBeginn(item, i)">
+      <h2>{{ item.beginn }} Uhr</h2>
+    </div>
+    <app-eintrag (click)="zeigeEintrag(item)" [eintrag]="item"></app-eintrag>
+  </div>
+
+
+Die Gestaltung überlasse ich Ihnen :-)
+
+
+Auswahlmenü für Komplett/Themen/etc. 
+
+In der App sind für das Programm unterschiedliche Voreinstellungen gegeben
+So kann das komplette Programm angezeigt werden (wie bisher) oder es wird
+nach Themen, Formaten, Orten oder Einrichtungen sortiert.
+
+Desweiteren soll eine Suchfunktion ergänzt werden.
+
+Um diese Auswahl zu implementieren, wird einfach ein weiterer <ion-toolbar>
+im <ion-header> ergänzt. Dort findet das <ion-segment> Verwendung.
+Ein IonSegment hat verschiedene IonSegmentButtons, die jeweils einen unterschiedlichen
+Value haben. Dieser Value wird über Databinding mit der Eigenschaft selectedSegment
+verbunden.
+
+ <ion-toolbar class="toolbar-normal">
+    <ion-segment [scrollable]="true" [(ngModel)]="selectedSegment" class="segment-normal">
+      <ion-segment-button value="Komplett" (click)="setSegmentLabel('Komplett'); setEintraege()">
+        <ion-icon src="../../../assets/myicons/Programm.svg"></ion-icon>
+      </ion-segment-button>
+      <ion-segment-button value="Themen" (click)="setSegmentLabel('Themen'); setEintraege()">
+        <ion-icon src="../../../assets/myicons/Themen.svg"></ion-icon>
+      </ion-segment-button>
+      <ion-segment-button value="Formate" (click)="setSegmentLabel('Formate'); setEintraege()">
+        <ion-icon src="../../../assets/myicons/Formate.svg"></ion-icon>
+      </ion-segment-button>
+      <ion-segment-button value="Orte" (click)="setSegmentLabel('Orte'); setEintraege()">
+        <ion-icon src="../../../assets/myicons/orte.svg"></ion-icon>
+      </ion-segment-button>
+      <ion-segment-button value="Einrichtungen" (click)="setSegmentLabel('Einrichtungen'); setEintraege()">
+        <ion-icon src="../../../assets/myicons/Einrichtungen.svg"></ion-icon>
+      </ion-segment-button>
+    </ion-segment>
+  </ion-toolbar>
+<ion-header>
+
+Beim Touch auf einen der Buttons wird also der Wert von selectedSegment gesetzt und es werden jeweils
+die beiden Methoden setSegmentLabel() und setEintraege() aufgerufen.
+
+selectedSegment: string = 'Komplett'; // Aktuell ausgewähltes Segment
+
+Je nach ausgewähltem Button werden unterschiedliche Dinge angezeigt:
+
+1. Bei Komplett wird das angezeigt, was sie bisher programmiert haben
+2. Bei Themen, Formaten, Orten oder Einrichtungen wird jedoch eine entsprechende
+Liste angezeigt und erst nach Klick auf einen Eintrag in dieser Liste werden wieder
+Eintraege angezeigt.
+
+Um unterscheiden zu können, was angezeigt werden soll, ergänzen sie eine
+Eigenschaft 
+
+contentSelector: string = 'Komplett';
+
+sowie eine Eigenschaft 
+
+ segmentLabel: string = 'Komplett'; // Standardtext für das Textfeld
+
+Diese wird für die Anzeige im Header verwendet.
+
+In der Methode setSegmentLabel() setzen Sie die beiden Eigenschaften auf den 
+übergebenen Wert:
+
+// Methode zur Aktualisierung des Textes im Textfeld
+  setSegmentLabel(label: string) {
+    //console.log('setSegmentLabel', label);
+    this.segmentLabel = label;
+    this.contentSelector = label;
+  }
+
+Wenn Sie noch die Methode
+
+   setEintraege() {
+  }
+
+erst mal als leere Methode einfügen, dann sollte zumindest das Menü klappen
+und der Headertext sich anpassen.
+
+Um jetzt auf der Seite unterschiedliche Dinge anzuzeigen, können wir uns
+an der Eigenschaft contentSelector orientieren und mit bedingten Anweisungen
+arbeiten:
+
+<div *ngIf="contentSelector === 'Komplett'">
+  <div *ngFor="let item of getdataservice.data | slice:0:visibleEntries; let i = index">
+    <div *ngIf="setBeginn(item, i)">
+      <h2>{{ item.beginn }} Uhr</h2>
+    </div>
+    <app-eintrag (click)="zeigeEintrag(item)" [eintrag]="item"></app-eintrag>
+  </div>
+  <ion-infinite-scroll (ionInfinite)="ladeMehrDaten($event)">
+    <ion-infinite-scroll-content loadingSpinner="bubbles" loadingText="Lade mehr Einträge...">
+    </ion-infinite-scroll-content>
+  </ion-infinite-scroll>
+</div>
+
+Der bisherige Code wird also nur ausgeführt, wenn "Komplett" ausgewählt ist.
+
+
+
